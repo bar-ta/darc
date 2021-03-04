@@ -154,18 +154,17 @@ class Dataset:
 		"""
 		for sent in self.gen_sentences(include_multiwords=True):
 			graph = nx.DiGraph()
-			graph.add_node(0, FORM='\xa0', LEMMA='\xa0', UPOSTAG='ROOT', FEATS='_')
+			graph.add_node('0', label='\xa0')
 
 			for word in sent:
 				if type(word.ID) is int:
-					graph.add_node(word.ID,
-							FORM=word.FORM, LEMMA=word.LEMMA,
-							UPOSTAG=word.UPOSTAG, FEATS=word.FEATS)
+					graph.add_node(str(word.ID),
+							label=word.FORM)
 
 					if not edgeless and word.HEAD != '_':
-						graph.add_edge(word.HEAD, word.ID, DEPREL=word.DEPREL)
+						graph.add_edge(str(word.HEAD), str(word.ID), label=word.DEPREL)
 				else:
-					graph.graph[word.ID] = word
+					graph.graph[str(word.ID)] = word
 
 			yield graph
 
