@@ -43,7 +43,7 @@ class ConlluError(ValueError):
 
 class Dataset:
 
-	def __init__(self, file_path, ud_version=2):
+	def __init__(self, file_path, doc_id_prefix, sent_id_prefix, ud_version=2):
 		"""
 		Constructor. Expects the path to the .conllu dataset file. The latter
 		is not opened until one of the gen_* methods is invoked.
@@ -52,6 +52,8 @@ class Dataset:
 		the keyword argument.
 		"""
 		self.file_path = file_path
+		self.doc_id_prefix = doc_id_prefix
+		self.sent_id_prefix = sent_id_prefix
 
 		if ud_version == 1:
 			self.POS_TAGS = ud.POS_TAGS_V1
@@ -115,8 +117,15 @@ class Dataset:
 
 		try:
 			with open(self.file_path, encoding='utf-8') as f:
+				doc_id = ''
+				sent_id = ''
+				sentence_counter = 0
 				for line_num, line in enumerate(map(lambda x: x.strip(), f)):
 					if line.startswith('#'):  # comments
+						if self.doc_id_prefix in line:
+							doc_id = line.partition(self.doc_id_prefix)[-1]
+						elif self.sent_id_prefix in line:
+							sent_id = line.partition(self.sent_id_prefix)[-1]
 						continue
 
 					elif line:
@@ -125,7 +134,13 @@ class Dataset:
 							sent.append(word)
 
 					else:  # empty lines mark sentence boundaries
-						yield tuple(sent)
+						if doc_id == '':
+							doc_id = 0
+						if sent_id == '':
+							sent_id = sentence_counter
+						sentence_counter += 1
+						doc_sent_name = str(doc_id) + '_' + str(sent_id)
+						yield doc_sent_name, tuple(sent)
 						sent = []
 
 		except IOError:
@@ -152,7 +167,7 @@ class Dataset:
 		Raises a ConlluError if the file does not conform to the CoNLL-U format
 		of the version specified by self.ud_version.
 		"""
-		for sent in self.gen_sentences(include_multiwords=True):
+		for doc_sent_name, sent in self.gen_sentences(include_multiwords=True):
 			graph = nx.DiGraph()
 			graph.add_node('0', label='\xa0')
 
@@ -164,9 +179,9 @@ class Dataset:
 					if not edgeless and word.HEAD != '_':
 						graph.add_edge(str(word.HEAD), str(word.ID), label=word.DEPREL)
 				else:
-					graph.graph[str(word.ID)] = word
+					graph.graph[str(word.ID)] = str(word.ID)
 
-			yield graph
+			yield doc_sent_name, graph
 
 
 	"""
