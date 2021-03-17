@@ -43,7 +43,7 @@ class ConlluError(ValueError):
 
 class Dataset:
 
-	def __init__(self, file_path, doc_id_prefix, sent_id_prefix, ud_version=2):
+	def __init__(self, file_path, doc_id_prefix, sent_id_prefix, node_labels_type, ud_version=2):
 		"""
 		Constructor. Expects the path to the .conllu dataset file. The latter
 		is not opened until one of the gen_* methods is invoked.
@@ -54,6 +54,7 @@ class Dataset:
 		self.file_path = file_path
 		self.doc_id_prefix = doc_id_prefix
 		self.sent_id_prefix = sent_id_prefix
+		self.node_labels_type = node_labels_type
 
 		if ud_version == 1:
 			self.POS_TAGS = ud.POS_TAGS_V1
@@ -173,8 +174,16 @@ class Dataset:
 
 			for word in sent:
 				if type(word.ID) is int:
+					# choose the type of the label
+					if self.node_labels_type == 'FORM':
+						node_label = word.FORM
+					elif self.node_labels_type == 'LEMMA':
+						node_label = word.LEMMA
+					elif self.node_labels_type == 'POS':
+						node_label = word.UPOSTAG
+
 					graph.add_node(str(word.ID),
-							label=word.FORM)
+							label=node_label)
 
 					if not edgeless and word.HEAD != '_':
 						graph.add_edge(str(word.HEAD), str(word.ID), label=word.DEPREL)
